@@ -1,5 +1,3 @@
-/// <reference lib="deno.ns" />
-
 import { createClient } from "@supabase/supabase-js";
 
 const PAYSTACK_SECRET_KEY = Deno.env.get("PAYSTACK_SECRET_KEY") ?? "";
