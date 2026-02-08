@@ -6,26 +6,32 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+interface CartItem {
+  product_id: number;
+  quantity: number;
+}
+
+interface Product {
+  id: number;
+  price: number;
+  discount_active: boolean;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
+}
+
 Deno.serve(async (req) => {
   const now = new Date().toISOString();
   console.log(`[${now}] Recieved ${req.method} request to ${req.url}`);
 
   if (req.method === "OPTIONS") {
-    console.log("CORS preflight request received");
     return new Response("ok", { headers: corsHeaders, status: 200 });
   }
 
   try {
-    console.log("Processing POS request...");
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const paystackKey = Deno.env.get("PAYSTACK_SECRET_KEY") ?? "";
-
-    console.log("Environment Status:", {
-      URL: supabaseUrl ? "FOUND" : "MISSING",
-      SERVICE_KEY: supabaseServiceKey ? "FOUND" : "MISSING",
-      PAYSTACK_KEY: paystackKey ? "FOUND" : "MISSING",
-    });
 
     if (!supabaseUrl || !supabaseServiceKey || !paystackKey) {
       throw new Error("Missing required server-side environment variables");
@@ -56,7 +62,7 @@ Deno.serve(async (req) => {
       "create_order_secure",
       {
         p_email: email,
-        p_items: items,
+        p_items: items, // Pass raw items, RPC handles price/discount calculation
         p_customer_name: customer_name,
         p_phone: phone,
         p_address: address,
@@ -117,12 +123,9 @@ Deno.serve(async (req) => {
     //   status: 400,
     //   headers: { ...corsHeaders, "Content-Type": "application/json" },
     // });
-    return new Response(
-      JSON.stringify({ error: message }),
-      {
-        status: message.includes("required") ? 400 : 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return new Response(JSON.stringify({ error: message }), {
+      status: message.includes("required") ? 400 : 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

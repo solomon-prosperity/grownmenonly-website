@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useCartContext } from "@/components/CartProvider";
+import { calculateFinalPrice, formatPrice } from "@/lib/priceUtils";
 
 interface Product {
   id: number;
@@ -10,6 +11,10 @@ interface Product {
   price: number;
   image_url: string;
   slug: string;
+  stock: number;
+  discount_active: boolean;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
 }
 
 interface ProductCardProps {
@@ -19,21 +24,18 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const { addToCart } = useCartContext();
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
+  const finalPrice = calculateFinalPrice(product);
+  const hasDiscount = product.discount_active && finalPrice < product.price;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (product.stock <= 0) return;
+
     addToCart({
       id: product.id,
       name: product.name,
-      price: product.price,
+      price: finalPrice,
       slug: product.slug,
     });
   };
@@ -70,6 +72,13 @@ export default function ProductCard({ product }: ProductCardProps) {
             </svg>
           </div>
         )}
+
+        {/* SALE Badge */}
+        {hasDiscount && (
+          <div className="absolute top-4 left-4 bg-wood-500 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 z-10 shadow-lg">
+            SALE
+          </div>
+        )}
       </div>
 
       {/* Product Info */}
@@ -77,15 +86,27 @@ export default function ProductCard({ product }: ProductCardProps) {
         <h3 className="text-lg font-semibold mb-2 group-hover:text-wood-500 transition-colors">
           {product.name}
         </h3>
-        <p className="text-xl font-bold text-wood-500 mb-4">
-          {formatPrice(product.price)}
-        </p>
+        <div className="flex items-baseline gap-2 mb-4">
+          <p className="text-xl font-bold text-wood-500">
+            {formatPrice(finalPrice)}
+          </p>
+          {hasDiscount && (
+            <p className="text-sm text-gray-400 line-through">
+              {formatPrice(product.price)}
+            </p>
+          )}
+        </div>
         <button
           type="button"
           onClick={handleAddToCart}
-          className="w-full bg-wood-500 hover:bg-wood-600 text-white font-semibold py-3 px-4 transition-colors duration-300"
+          disabled={product.stock <= 0}
+          className={`w-full font-semibold py-3 px-4 transition-colors duration-300 ${
+            product.stock <= 0
+              ? "bg-charcoal-700 text-gray-400 cursor-not-allowed"
+              : "bg-wood-500 hover:bg-wood-600 text-white"
+          }`}
         >
-          Add to Cart
+          {product.stock <= 0 ? "Sold Out" : "Add to Cart"}
         </button>
       </div>
     </Link>

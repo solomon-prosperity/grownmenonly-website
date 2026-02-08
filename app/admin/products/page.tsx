@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabaseClient";
+import { calculateFinalPrice } from "@/lib/priceUtils";
 
 interface Product {
   id: number;
@@ -14,6 +15,9 @@ interface Product {
   stock: number;
   image_url: string;
   is_active: boolean;
+  discount_active: boolean;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
 }
 
 export default function AdminProducts() {
@@ -150,6 +154,9 @@ export default function AdminProducts() {
       stock: 0,
       image_url: "",
       is_active: true,
+      discount_active: false,
+      discount_type: "percentage",
+      discount_value: 0,
     });
     setIsFormOpen(true);
   };
@@ -170,6 +177,26 @@ export default function AdminProducts() {
 
       if (editingProduct.stock! < 0) {
         throw new Error("Stock cannot be negative");
+      }
+
+      if (editingProduct.discount_active) {
+        if (editingProduct.discount_value! < 0) {
+          throw new Error("Discount value cannot be negative");
+        }
+        if (
+          editingProduct.discount_type === "percentage" &&
+          editingProduct.discount_value! > 90
+        ) {
+          throw new Error("Percentage discount cannot exceed 90%");
+        }
+        if (
+          editingProduct.discount_type === "fixed" &&
+          editingProduct.discount_value! >= editingProduct.price!
+        ) {
+          throw new Error(
+            "Fixed discount must be less than the original price",
+          );
+        }
       }
 
       if (isNew) {
@@ -308,7 +335,8 @@ export default function AdminProducts() {
               {products.map((product) => (
                 <tr
                   key={product.id}
-                  className="hover:bg-gray-50 transition-colors"
+                  onClick={() => handleOpenEdit(product)}
+                  className="hover:bg-gray-50 transition-colors cursor-pointer group"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -387,7 +415,10 @@ export default function AdminProducts() {
                     {openMenuId === product.id && (
                       <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 py-1">
                         <button
-                          onClick={() => handleOpenEdit(product)}
+                          onClick={() => {
+                            handleOpenEdit(product);
+                            setOpenMenuId(null);
+                          }}
                           className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           <svg
@@ -403,7 +434,7 @@ export default function AdminProducts() {
                               d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                             />
                           </svg>
-                          Edit
+                          View / Edit
                         </button>
                         <button
                           onClick={(e) => confirmDelete(e, product.id)}
@@ -434,7 +465,6 @@ export default function AdminProducts() {
         </div>
       )}
 
-      {/* Modal Form */}
       {isFormOpen && editingProduct && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -631,6 +661,99 @@ export default function AdminProducts() {
                   >
                     Product is Active (Visible on site)
                   </label>
+                </div>
+
+                {/* Discount Section */}
+                <div className="md:col-span-2 space-y-4 border-t border-gray-100 pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+                        Product Discount
+                      </h4>
+                      <p className="text-xs text-gray-500">
+                        Apply a limited-time price reduction
+                      </p>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="discount_active"
+                        checked={editingProduct.discount_active}
+                        onChange={(e) =>
+                          setEditingProduct({
+                            ...editingProduct,
+                            discount_active: e.target.checked,
+                          })
+                        }
+                        className="h-4 w-4 text-wood-600 focus:ring-wood-500 border-gray-300 rounded"
+                      />
+                      <label
+                        htmlFor="discount_active"
+                        className="ml-2 block text-sm font-semibold text-gray-700"
+                      >
+                        Enable Discount
+                      </label>
+                    </div>
+                  </div>
+
+                  {editingProduct.discount_active && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-1">
+                          Discount Type
+                        </label>
+                        <select
+                          value={editingProduct.discount_type}
+                          onChange={(e) =>
+                            setEditingProduct({
+                              ...editingProduct,
+                              discount_type: e.target.value as any,
+                            })
+                          }
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wood-500 outline-none bg-white text-gray-900"
+                        >
+                          <option value="percentage">Percentage (%)</option>
+                          <option value="fixed">Fixed Amount (₦)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-1">
+                          {editingProduct.discount_type === "percentage"
+                            ? "Percentage Off"
+                            : "Amount Off"}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max={
+                            editingProduct.discount_type === "percentage"
+                              ? 90
+                              : undefined
+                          }
+                          value={editingProduct.discount_value}
+                          onChange={(e) =>
+                            setEditingProduct({
+                              ...editingProduct,
+                              discount_value: Number(e.target.value),
+                            })
+                          }
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-wood-500 outline-none bg-white text-gray-900 font-bold"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="flex flex-col justify-center">
+                        <label className="block text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-1">
+                          Preview Final Price
+                        </label>
+                        <p className="text-lg font-black text-wood-600">
+                          ₦
+                          {calculateFinalPrice(
+                            editingProduct as any,
+                          ).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

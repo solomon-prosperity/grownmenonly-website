@@ -14,6 +14,10 @@ interface Product {
   slug: string;
   category: "single" | "kit";
   description?: string;
+  stock: number;
+  discount_active: boolean;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
 }
 
 export default function ShopPage() {

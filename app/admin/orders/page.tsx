@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { formatPrice } from "@/lib/priceUtils";
 
 type OrderStatus =
   | "pending"
@@ -440,7 +441,8 @@ export default function AdminOrders() {
               orders.map((order) => (
                 <tr
                   key={order.id}
-                  className="hover:bg-gray-50 transition-colors"
+                  onClick={() => setSelectedOrder(order)}
+                  className="hover:bg-gray-50 transition-colors cursor-pointer group"
                 >
                   <td className="px-6 py-4 whitespace-nowrap font-mono text-xs text-gray-500">
                     {order.id.slice(0, 8)}...
@@ -466,7 +468,10 @@ export default function AdminOrders() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button
-                      onClick={() => setSelectedOrder(order)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedOrder(order);
+                      }}
                       className="text-wood-600 hover:text-wood-500 font-medium text-sm transition-colors"
                     >
                       View Details
@@ -848,11 +853,29 @@ export default function AdminOrders() {
                             <td className="px-4 py-3 text-sm text-center text-gray-600">
                               {item.quantity}
                             </td>
-                            <td className="px-4 py-3 text-sm text-right text-gray-600">
-                              ₦{item.price.toLocaleString()}
+                            <td className="px-4 py-3 text-sm text-right">
+                              <div className="text-gray-900 font-bold">
+                                {formatPrice(Number(item.price))}
+                              </div>
+                              {item.original_price &&
+                                Number(item.original_price) !==
+                                  Number(item.price) && (
+                                  <div className="text-[10px] text-gray-400 line-through">
+                                    {formatPrice(Number(item.original_price))}
+                                  </div>
+                                )}
+                              {item.discount_type && (
+                                <div className="text-[9px] text-wood-500 font-bold uppercase tracking-tighter">
+                                  {item.discount_type === "percentage"
+                                    ? `${item.discount_value}% OFF`
+                                    : `${formatPrice(Number(item.discount_value))} OFF`}
+                                </div>
+                              )}
                             </td>
-                            <td className="px-4 py-3 text-sm text-right font-bold text-gray-900">
-                              ₦{(item.price * item.quantity).toLocaleString()}
+                            <td className="px-4 py-3 text-sm text-right text-gray-900 font-bold">
+                              {formatPrice(
+                                Number(item.price) * Number(item.quantity),
+                              )}
                             </td>
                           </tr>
                         ))}

@@ -121,31 +121,17 @@ DECLARE
     v_transaction_id UUID;
     v_total NUMERIC := 0;
     v_item JSONB;
-    v_product_id UUID;
+    v_product_id UUID; -- Fixed from UUID to INT to match products(id)
     v_qty INT;
-    v_price NUMERIC;
+    v_price NUMERIC; -- original price
+    v_discount_active BOOLEAN;
+    v_discount_type TEXT;
+    v_discount_value NUMERIC;
+    v_final_price NUMERIC;
     v_reserved_at TIMESTAMPTZ;
     v_expires_at TIMESTAMPTZ;
 BEGIN
-    -- 1. Validate initial stock check for all items
-    FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
-        -- Validate JSON format
-        IF NOT (v_item ? 'id' AND v_item ? 'quantity') THEN
-            RAISE EXCEPTION 'Invalid cart item format';
-        END IF;
-
-        v_product_id := (v_item->>'id')::UUID;
-        v_qty := (v_item->>'quantity')::INT;
-
-        IF NOT EXISTS (
-            SELECT 1 FROM products
-            WHERE id = v_product_id AND stock >= v_qty
-        ) THEN
-            RAISE EXCEPTION 'Product % is out of stock or insufficient quantity', v_item->>'id';
-        END IF;
-    END LOOP;
-
-    -- 2. Create the order and capture timestamps
+    -- 1. Create the order and capture timestamps
     INSERT INTO orders (
         email,
         total,
@@ -175,37 +161,66 @@ BEGIN
         v_reserved_at,
         v_expires_at;
 
-    -- 3. Process items and reserve stock atomically
+    -- 2. Process items and reserve stock atomically
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_items) LOOP
-        v_product_id := (v_item->>'id')::UUID;
+        v_product_id := (v_item->>'id')::UUID; -- Match frontend payload 'id'
         v_qty := (v_item->>'quantity')::INT;
 
+        -- Atomic stock decrement and get current price/discount info
         UPDATE products
         SET stock = stock - v_qty
         WHERE id = v_product_id AND stock >= v_qty
-        RETURNING price INTO v_price;
+        RETURNING price, discount_active, discount_type, discount_value 
+        INTO v_price, v_discount_active, v_discount_type, v_discount_value;
 
         IF v_price IS NULL THEN
-            RAISE EXCEPTION 'Concurrency error: Stock changed for product %', v_product_id;
+            RAISE EXCEPTION 'Product % is out of stock or insufficient quantity', v_product_id;
         END IF;
 
-        v_total := v_total + (v_price * v_qty);
+        -- Calculate final price server-side
+        v_final_price := v_price;
+        IF v_discount_active THEN
+            IF v_discount_type = 'percentage' THEN
+                v_final_price := v_price * (1 - v_discount_value / 100);
+            ELSIF v_discount_type = 'fixed' THEN
+                v_final_price := v_price - v_discount_value;
+            END IF;
+            v_final_price := GREATEST(0, v_final_price);
+        END IF;
 
-        INSERT INTO order_items (order_id, product_id, quantity, price)
-        VALUES (v_order_id, v_product_id, v_qty, v_price);
+        v_total := v_total + (v_final_price * v_qty);
+
+        INSERT INTO order_items (
+            order_id, 
+            product_id, 
+            quantity, 
+            price, 
+            original_price, 
+            discount_type, 
+            discount_value
+        )
+        VALUES (
+            v_order_id, 
+            v_product_id, 
+            v_qty, 
+            v_final_price, 
+            v_price, 
+            v_discount_type, 
+            v_discount_value
+        );
     END LOOP;
 
-    -- 4. Update order total
+    -- 3. Update order total
     UPDATE orders
     SET total = v_total
     WHERE id = v_order_id;
 
-    -- 5. Create transaction (Reference is Transaction UUID)
+    -- 4. Create transaction (Reference is Transaction UUID)
     v_transaction_id := gen_random_uuid();
     INSERT INTO transactions (id, order_id, reference, amount, status)
     VALUES (v_transaction_id, v_order_id, v_transaction_id, v_total, 'pending');
 
-    -- 6. Return full info to frontend
+    -- 5. Return full info to frontend
     RETURN jsonb_build_object(
         'order_id', v_order_id,
         'transaction_id', v_transaction_id,

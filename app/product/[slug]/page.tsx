@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useCartContext } from "@/components/CartProvider";
 import { supabase } from "@/lib/supabaseClient";
+import { calculateFinalPrice, formatPrice } from "@/lib/priceUtils";
 
 type Category = "single" | "kit";
 
@@ -15,6 +16,10 @@ interface Product {
   slug: string;
   category: Category;
   description: string;
+  stock: number;
+  discount_active: boolean;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
 }
 
 export default function ProductDetailPage({
@@ -109,26 +114,46 @@ export default function ProductDetailPage({
               {product.name}
             </h1>
 
-            <p className="text-3xl font-bold text-wood-500 mb-6">
-              ₦{product.price.toLocaleString()}
-            </p>
+            <div className="flex items-baseline gap-4 mb-6">
+              <p className="text-3xl font-bold text-wood-500">
+                {formatPrice(calculateFinalPrice(product))}
+              </p>
+              {product.discount_active &&
+                calculateFinalPrice(product) < Number(product.price) && (
+                  <p className="text-xl text-gray-500 line-through">
+                    {formatPrice(Number(product.price))}
+                  </p>
+                )}
+              {product.discount_active && (
+                <span className="bg-wood-500 text-white text-[10px] font-black px-2 py-1 uppercase tracking-widest">
+                  SALE
+                </span>
+              )}
+            </div>
 
             <p className="text-gray-400 text-lg leading-relaxed mb-8">
               {product.description}
             </p>
 
             <button
-              onClick={() =>
-                addToCart({
-                  id: product.id,
-                  name: product.name,
-                  price: product.price,
-                  slug: product.slug,
-                })
-              }
-              className="bg-wood-500 hover:bg-wood-600 text-white font-semibold px-12 py-4 text-lg transition-colors w-full lg:w-auto"
+              onClick={() => {
+                if (product.stock > 0) {
+                  addToCart({
+                    id: product.id,
+                    name: product.name,
+                    price: calculateFinalPrice(product),
+                    slug: product.slug,
+                  });
+                }
+              }}
+              disabled={product.stock <= 0}
+              className={`px-12 py-4 text-lg transition-colors w-full lg:w-auto font-semibold ${
+                product.stock <= 0
+                  ? "bg-charcoal-800 text-gray-500 cursor-not-allowed"
+                  : "bg-wood-500 hover:bg-wood-600 text-white"
+              }`}
             >
-              Add to Cart
+              {product.stock <= 0 ? "SOLD OUT" : "Add to Cart"}
             </button>
           </div>
         </div>

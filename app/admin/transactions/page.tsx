@@ -341,7 +341,8 @@ export default function AdminTransactions() {
               transactions.map((tx) => (
                 <tr
                   key={tx.id}
-                  className="hover:bg-gray-50 transition-colors group"
+                  onClick={() => setSelectedTx(tx)}
+                  className="hover:bg-gray-50 transition-colors cursor-pointer group"
                 >
                   <td className="px-6 py-4 whitespace-nowrap font-mono text-[10px] text-gray-400">
                     {tx.id.slice(0, 8)}...
@@ -349,6 +350,7 @@ export default function AdminTransactions() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Link
                       href={`/admin/orders?id=${tx.order_id}`}
+                      onClick={(e) => e.stopPropagation()}
                       className="text-wood-600 hover:underline font-mono text-[10px]"
                     >
                       {tx.order_id.slice(0, 8)}...
@@ -372,7 +374,10 @@ export default function AdminTransactions() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button
-                      onClick={() => setSelectedTx(tx)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTx(tx);
+                      }}
                       className="text-gray-400 group-hover:text-wood-600 font-medium text-xs uppercase tracking-widest transition-colors"
                     >
                       Details

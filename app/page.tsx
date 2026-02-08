@@ -12,6 +12,10 @@ interface Product {
   price: number;
   image_url: string;
   slug: string;
+  stock: number;
+  discount_active: boolean;
+  discount_type: "percentage" | "fixed";
+  discount_value: number;
 }
 
 export default function Home() {
