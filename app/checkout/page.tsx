@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useCartContext } from "@/components/CartProvider";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -32,6 +32,16 @@ export default function CheckoutPage() {
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  // Ref to prevent double submission (state updates can be async)
+  const isSubmittingRef = useRef(false);
+
+  // Reset ref when status changes to allow retry
+  useEffect(() => {
+    if (status === "idle" || status === "error") {
+      isSubmittingRef.current = false;
+    }
+  }, [status]);
 
   // Deriving Cart Items for API
   const cartItemsForApi = useMemo(() => {
@@ -82,6 +92,10 @@ export default function CheckoutPage() {
   const handleInitializeCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
+
+    // Prevent double submission
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
     setStatus("submitting");
     setError(null);
@@ -137,6 +151,7 @@ export default function CheckoutPage() {
         (typeof err === "string" ? err : "Failed to initialize checkout");
       setError(errorMessage);
       setStatus("error");
+      isSubmittingRef.current = false;
     }
   };
   // const handleInitializeCheckout = async (e: React.FormEvent) => {

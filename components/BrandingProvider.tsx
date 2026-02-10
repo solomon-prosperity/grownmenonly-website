@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 interface BrandingContextType {
@@ -92,11 +93,16 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     <div className="fixed inset-0 z-[9999] bg-charcoal-900 flex flex-col items-center justify-center p-6 text-center">
       <div className="max-w-md space-y-8 animate-in fade-in zoom-in duration-500">
         {logoUrl ? (
-          <img
-            src={logoUrl}
-            alt={siteName}
-            className="h-20 w-auto mx-auto object-contain"
-          />
+          <div className="relative h-20 w-full">
+            <Image
+              src={logoUrl}
+              alt={siteName}
+              fill
+              className="object-contain"
+              sizes="(max-width: 768px) 100vw, 400px"
+              priority
+            />
+          </div>
         ) : (
           <h1 className="text-4xl font-black uppercase tracking-tighter text-white">
             {siteName}

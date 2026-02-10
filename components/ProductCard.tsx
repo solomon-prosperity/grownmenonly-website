@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useCartContext } from "@/components/CartProvider";
+import { useToast } from "@/components/ToastProvider";
 import { calculateFinalPrice, formatPrice } from "@/lib/priceUtils";
 
 interface Product {
@@ -22,10 +23,14 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { addToCart } = useCartContext();
+  const { addToCart, cart, updateQuantity, removeFromCart } = useCartContext();
+  const { addToast } = useToast();
 
   const finalPrice = calculateFinalPrice(product);
   const hasDiscount = product.discount_active && finalPrice < product.price;
+
+  const cartItem = cart.find((item) => item.id === product.id);
+  const quantity = cartItem?.quantity || 0;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -38,6 +43,25 @@ export default function ProductCard({ product }: ProductCardProps) {
       price: finalPrice,
       slug: product.slug,
     });
+    addToast("Added to cart", "success");
+  };
+
+  const handleUpdateQuantity = (e: React.MouseEvent, newQuantity: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (newQuantity <= 0) {
+      removeFromCart(product.id);
+      addToast("Removed from cart", "info");
+      return;
+    }
+
+    if (newQuantity > product.stock) {
+      addToast("Cannot add more than available stock", "error");
+      return;
+    }
+
+    updateQuantity(product.id, newQuantity);
   };
 
   return (
@@ -96,18 +120,60 @@ export default function ProductCard({ product }: ProductCardProps) {
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleAddToCart}
-          disabled={product.stock <= 0}
-          className={`w-full font-semibold py-3 px-4 transition-colors duration-300 ${
-            product.stock <= 0
-              ? "bg-charcoal-700 text-gray-400 cursor-not-allowed"
-              : "bg-wood-500 hover:bg-wood-600 text-white"
-          }`}
-        >
-          {product.stock <= 0 ? "Sold Out" : "Add to Cart"}
-        </button>
+        {quantity > 0 ? (
+          <div className="flex items-center justify-between bg-charcoal-700 rounded-lg p-1">
+            <button
+              onClick={(e) => handleUpdateQuantity(e, quantity - 1)}
+              className="w-10 h-10 flex items-center justify-center text-white hover:text-wood-500 transition-colors"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 12H4"
+                />
+              </svg>
+            </button>
+            <span className="text-white font-bold">{quantity}</span>
+            <button
+              onClick={(e) => handleUpdateQuantity(e, quantity + 1)}
+              className="w-10 h-10 flex items-center justify-center text-white hover:text-wood-500 transition-colors"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={product.stock <= 0}
+            className={`w-full font-semibold py-3 px-4 transition-colors duration-300 ${
+              product.stock <= 0
+                ? "bg-charcoal-700 text-gray-400 cursor-not-allowed"
+                : "bg-wood-500 hover:bg-wood-600 text-white"
+            }`}
+          >
+            {product.stock <= 0 ? "Sold Out" : "Add to Cart"}
+          </button>
+        )}
       </div>
     </Link>
   );

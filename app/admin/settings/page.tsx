@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function AdminSettings() {
@@ -144,10 +145,12 @@ export default function AdminSettings() {
                 </div>
               ) : logoUrl ? (
                 <>
-                  <img
+                  <Image
                     src={logoUrl}
                     alt="Store Logo"
-                    className="max-w-full max-h-full object-contain p-4 transition-transform group-hover:scale-105"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 256px"
+                    className="object-contain p-4 transition-transform group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-charcoal-900/0 group-hover:bg-charcoal-900/40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <span className="text-white text-xs font-bold uppercase tracking-widest">

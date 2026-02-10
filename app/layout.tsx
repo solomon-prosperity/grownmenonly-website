@@ -4,6 +4,7 @@ import "./globals.css";
 import LayoutWrapper from "@/components/LayoutWrapper";
 import { CartProvider } from "@/components/CartProvider";
 import { BrandingProvider } from "@/components/BrandingProvider";
+import { ToastProvider } from "@/components/ToastProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,9 +22,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <BrandingProvider>
-          <CartProvider>
-            <LayoutWrapper>{children}</LayoutWrapper>
-          </CartProvider>
+          <ToastProvider>
+            <CartProvider>
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </CartProvider>
+          </ToastProvider>
         </BrandingProvider>
       </body>
     </html>
