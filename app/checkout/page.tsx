@@ -43,6 +43,41 @@ export default function CheckoutPage() {
     }
   }, [status]);
 
+  // Load state from localStorage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem("GMO_CHECKOUT_STATE");
+    if (savedState) {
+      try {
+        const {
+          paymentUrl,
+          expiresAt,
+          formData: savedFormData,
+        } = JSON.parse(savedState);
+
+        // Check if expired
+        if (new Date(expiresAt) > new Date()) {
+          setPaymentUrl(paymentUrl);
+          setExpiresAt(expiresAt);
+          if (savedFormData) setFormData(savedFormData);
+          setStatus("ready");
+        } else {
+          localStorage.removeItem("GMO_CHECKOUT_STATE");
+        }
+      } catch (e) {
+        console.error("Failed to parse saved checkout state", e);
+        localStorage.removeItem("GMO_CHECKOUT_STATE");
+      }
+    }
+  }, []);
+
+  const clearCheckoutState = () => {
+    localStorage.removeItem("GMO_CHECKOUT_STATE");
+    setStatus("idle");
+    setPaymentUrl(null);
+    setExpiresAt(null);
+    setTimeLeft(null);
+  };
+
   // Deriving Cart Items for API
   const cartItemsForApi = useMemo(() => {
     return cart.map((item) => ({
@@ -73,6 +108,7 @@ export default function CheckoutPage() {
         clearInterval(interval);
         setTimeLeft(0);
         setStatus("expired");
+        localStorage.removeItem("GMO_CHECKOUT_STATE");
       } else {
         setTimeLeft(Math.floor(distance / 1000));
       }
@@ -143,6 +179,21 @@ export default function CheckoutPage() {
       setPaymentUrl(result.url);
       setExpiresAt(result.expires_at);
       setStatus("ready");
+
+      // Save state
+      localStorage.setItem(
+        "GMO_CHECKOUT_STATE",
+        JSON.stringify({
+          paymentUrl: result.url,
+          expiresAt: result.expires_at,
+          formData: {
+            email: formData.email,
+            fullName: formData.fullName,
+            phone: formData.phone,
+            address: formData.address,
+          },
+        }),
+      );
     } catch (err: any) {
       console.error("Checkout error:", err);
       // More specific error messages
@@ -371,7 +422,7 @@ export default function CheckoutPage() {
                   Payment Window Expired
                 </p>
                 <button
-                  onClick={() => setStatus("idle")}
+                  onClick={clearCheckoutState}
                   className="text-sm text-wood-500 hover:text-wood-400 underline uppercase tracking-widest"
                 >
                   Start Over
