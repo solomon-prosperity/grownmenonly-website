@@ -15,6 +15,7 @@ export default function AdminLayout({
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     let authListener: any;
@@ -123,8 +124,45 @@ export default function AdminLayout({
   if (!isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      <aside className="w-64 bg-charcoal-900 text-white flex-shrink-0 flex flex-col">
+    <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row relative">
+      {/* Mobile Mobile Header */}
+      <div className="md:hidden bg-charcoal-900 text-white p-4 flex justify-between items-center shadow-md">
+        <h1 className="text-lg font-bold">Admin Panel</h1>
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-2 text-gray-300 hover:text-white focus:outline-none"
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            {isSidebarOpen ? (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            ) : (
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            )}
+          </svg>
+        </button>
+      </div>
+
+      {/* Sidebar - Mobile: Off-canvas, Desktop: Static */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-charcoal-900 text-white flex flex-col transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
+          isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+        }`}
+      >
         <div className="p-6 border-b border-charcoal-700">
           <h1 className="text-xl font-bold">Admin Panel</h1>
           <p className="text-sm text-gray-400 mt-1">Grown Men Only</p>
@@ -165,13 +203,21 @@ export default function AdminLayout({
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <div className="bg-white border-b border-gray-200 px-8 py-6">
-          <h2 className="text-2xl font-bold text-gray-900">
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      <main className="flex-1 overflow-auto h-[calc(100vh-64px)] md:h-screen">
+        <div className="bg-white border-b border-gray-200 px-4 py-4 md:px-8 md:py-6">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-900">
             {navItems.find((item) => item.href === pathname)?.name || "Admin"}
           </h2>
         </div>
-        <div className="p-8">{children}</div>
+        <div className="p-4 md:p-8">{children}</div>
       </main>
     </div>
   );

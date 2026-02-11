@@ -285,14 +285,14 @@ export default function AdminProducts() {
         </div>
       )}
 
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Products</h2>
-          <p className="text-gray-600">Manage your product catalog</p>
+          <p className="text-gray-600 text-sm">Manage your product catalog</p>
         </div>
         <button
           onClick={handleOpenCreate}
-          className="bg-wood-500 hover:bg-wood-600 text-white px-6 py-2 rounded transition-colors"
+          className="w-full md:w-auto bg-wood-500 hover:bg-wood-600 text-white px-6 py-2 rounded transition-colors text-sm font-bold uppercase tracking-wide"
         >
           Add Product
         </button>
@@ -307,161 +307,163 @@ export default function AdminProducts() {
           {error}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-visible border border-gray-200">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Product
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Price
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Stock
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {products.map((product) => (
-                <tr
-                  key={product.id}
-                  onClick={() => handleOpenEdit(product)}
-                  className="hover:bg-gray-50 transition-colors cursor-pointer group"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded overflow-hidden relative border border-gray-100">
-                        {product.image_url ? (
-                          <Image
-                            src={product.image_url}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            ?
-                          </div>
-                        )}
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {product.name}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {product.slug}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-charcoal-100 text-charcoal-800 uppercase">
-                      {product.category}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                    ₦{product.price.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span
-                      className={
-                        product.stock <= 5 ? "text-red-600 font-bold" : ""
-                      }
-                    >
-                      {product.stock}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        product.is_active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {product.is_active ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenMenuId(
-                          openMenuId === product.id ? null : product.id,
-                        );
-                      }}
-                      className="text-gray-400 hover:text-gray-900 p-2 rounded-full hover:bg-gray-100 transition-colors"
-                    >
-                      <svg
-                        className="w-5 h-5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                      </svg>
-                    </button>
-
-                    {/* Dropdown Menu */}
-                    {openMenuId === product.id && (
-                      <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 py-1">
-                        <button
-                          onClick={() => {
-                            handleOpenEdit(product);
-                            setOpenMenuId(null);
-                          }}
-                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        >
-                          <svg
-                            className="w-4 h-4 mr-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                            />
-                          </svg>
-                          View / Edit
-                        </button>
-                        <button
-                          onClick={(e) => confirmDelete(e, product.id)}
-                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                        >
-                          <svg
-                            className="w-4 h-4 mr-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </td>
+        <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Product
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Price
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Stock
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {products.map((product) => (
+                  <tr
+                    key={product.id}
+                    onClick={() => handleOpenEdit(product)}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer group"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded overflow-hidden relative border border-gray-100">
+                          {product.image_url ? (
+                            <Image
+                              src={product.image_url}
+                              alt={product.name}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                              ?
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {product.name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {product.slug}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-charcoal-100 text-charcoal-800 uppercase">
+                        {product.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                      ₦{product.price.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <span
+                        className={
+                          product.stock <= 5 ? "text-red-600 font-bold" : ""
+                        }
+                      >
+                        {product.stock}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          product.is_active
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
+                        {product.is_active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId(
+                            openMenuId === product.id ? null : product.id,
+                          );
+                        }}
+                        className="text-gray-400 hover:text-gray-900 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                        </svg>
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      {openMenuId === product.id && (
+                        <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 py-1">
+                          <button
+                            onClick={() => {
+                              handleOpenEdit(product);
+                              setOpenMenuId(null);
+                            }}
+                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          >
+                            <svg
+                              className="w-4 h-4 mr-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                              />
+                            </svg>
+                            View / Edit
+                          </button>
+                          <button
+                            onClick={(e) => confirmDelete(e, product.id)}
+                            className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <svg
+                              className="w-4 h-4 mr-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

@@ -363,29 +363,58 @@ $$;
 -- 4. RPC: cleanup_stale_orders
 -- Returns stock from expired pending orders
 CREATE OR REPLACE FUNCTION cleanup_stale_orders()
-RETURNS INT LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 DECLARE
     v_count INT := 0;
     v_order_id UUID;
 BEGIN
-    FOR v_order_id IN 
-        UPDATE orders 
-        SET status = 'abandoned' 
-        WHERE status = 'pending' AND expires_at < NOW() 
-        RETURNING id 
+    FOR v_order_id IN
+        SELECT id
+        FROM orders
+        WHERE status = 'pending'
+          AND expires_at < NOW()
+        FOR UPDATE SKIP LOCKED
     LOOP
+        -- Mark order abandoned
+        UPDATE orders
+        SET status = 'abandoned'
+        WHERE id = v_order_id
+          AND status = 'pending';
+
         -- Return stock
         UPDATE products p
         SET stock = p.stock + oi.quantity
         FROM order_items oi
-        WHERE p.id = oi.product_id AND oi.order_id = v_order_id;
+        WHERE p.id = oi.product_id
+          AND oi.order_id = v_order_id;
 
-        -- Mark transaction as failed
-        UPDATE transactions SET status = 'failed' WHERE order_id = v_order_id AND status = 'pending';
-        
+        -- Mark transaction failed
+        UPDATE transactions
+        SET status = 'failed'
+        WHERE order_id = v_order_id
+          AND status = 'pending';
+
         v_count := v_count + 1;
     END LOOP;
-    
+
     RETURN v_count;
 END;
 $$;
+
+-- Add index to speed up cleanup
+CREATE INDEX IF NOT EXISTS idx_orders_pending_expiry
+ON orders (expires_at)
+WHERE status = 'pending';
+
+-- Schedule the cleanup job to run every 5 minutes
+SELECT cron.schedule(
+  'cleanup-stale-orders-job',
+  '*/5 * * * *',
+  $$ SELECT cleanup_stale_orders(); $$
+);
+
+-- To unschedule the job
+SELECT cron.unschedule('cleanup-stale-orders-job');
