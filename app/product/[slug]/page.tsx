@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useCartContext } from "@/components/CartProvider";
+import { useToast } from "@/components/ToastProvider";
 import { supabase } from "@/lib/supabaseClient";
 import { calculateFinalPrice, formatPrice } from "@/lib/priceUtils";
 
@@ -27,10 +28,14 @@ export default function ProductDetailPage({
 }: {
   params: { slug: string };
 }) {
-  const { addToCart } = useCartContext();
+  const { addToCart, cart, updateQuantity, removeFromCart } = useCartContext();
+  const { addToast } = useToast();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const cartItem = cart.find((item) => item.id === product?.id);
+  const quantityInCart = cartItem?.quantity || 0;
 
   useEffect(() => {
     async function fetchProduct() {
@@ -54,6 +59,36 @@ export default function ProductDetailPage({
 
     fetchProduct();
   }, [params.slug]);
+
+  const handleAddToCart = () => {
+    if (!product || product.stock <= 0) return;
+
+    const finalPrice = calculateFinalPrice(product);
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: finalPrice,
+      slug: product.slug,
+    });
+    addToast("Added to cart", "success");
+  };
+
+  const handleUpdateQuantity = (newQuantity: number) => {
+    if (!product) return;
+
+    if (newQuantity <= 0) {
+      removeFromCart(product.id);
+      addToast("Removed from cart", "info");
+      return;
+    }
+
+    if (newQuantity > product.stock) {
+      addToast("Cannot add more than available stock", "error");
+      return;
+    }
+
+    updateQuantity(product.id, newQuantity);
+  };
 
   if (loading) {
     return (
@@ -86,6 +121,8 @@ export default function ProductDetailPage({
     );
   }
 
+  const finalPrice = calculateFinalPrice(product);
+
   return (
     <main className="min-h-screen bg-charcoal-900 py-12 px-4 pt-28 sm:pt-32">
       <div className="max-w-7xl mx-auto">
@@ -116,10 +153,10 @@ export default function ProductDetailPage({
 
             <div className="flex items-baseline gap-4 mb-6">
               <p className="text-3xl font-bold text-wood-500">
-                {formatPrice(calculateFinalPrice(product))}
+                {formatPrice(finalPrice)}
               </p>
               {product.discount_active &&
-                calculateFinalPrice(product) < Number(product.price) && (
+                finalPrice < Number(product.price) && (
                   <p className="text-xl text-gray-500 line-through">
                     {formatPrice(Number(product.price))}
                   </p>
@@ -135,26 +172,61 @@ export default function ProductDetailPage({
               {product.description}
             </p>
 
-            <button
-              onClick={() => {
-                if (product.stock > 0) {
-                  addToCart({
-                    id: product.id,
-                    name: product.name,
-                    price: calculateFinalPrice(product),
-                    slug: product.slug,
-                  });
-                }
-              }}
-              disabled={product.stock <= 0}
-              className={`px-12 py-4 text-lg transition-colors w-full lg:w-auto font-semibold ${
-                product.stock <= 0
-                  ? "bg-charcoal-800 text-gray-500 cursor-not-allowed"
-                  : "bg-wood-500 hover:bg-wood-600 text-white"
-              }`}
-            >
-              {product.stock <= 0 ? "SOLD OUT" : "Add to Cart"}
-            </button>
+            {quantityInCart > 0 ? (
+              <div className="flex items-center justify-between bg-charcoal-800 border border-charcoal-700 rounded-lg p-2 w-full lg:w-48 mb-8">
+                <button
+                  onClick={() => handleUpdateQuantity(quantityInCart - 1)}
+                  className="w-12 h-12 flex items-center justify-center text-white hover:text-wood-500 transition-colors"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M20 12H4"
+                    />
+                  </svg>
+                </button>
+                <span className="text-white text-xl font-bold">
+                  {quantityInCart}
+                </span>
+                <button
+                  onClick={() => handleUpdateQuantity(quantityInCart + 1)}
+                  className="w-12 h-12 flex items-center justify-center text-white hover:text-wood-500 transition-colors"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleAddToCart}
+                disabled={product.stock <= 0}
+                className={`px-12 py-4 text-lg transition-colors w-full lg:w-auto font-semibold mb-8 ${
+                  product.stock <= 0
+                    ? "bg-charcoal-800 text-gray-500 cursor-not-allowed"
+                    : "bg-wood-500 hover:bg-wood-600 text-white"
+                }`}
+              >
+                {product.stock <= 0 ? "SOLD OUT" : "Add to Cart"}
+              </button>
+            )}
           </div>
         </div>
       </div>

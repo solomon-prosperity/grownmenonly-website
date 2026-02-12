@@ -22,7 +22,7 @@ function SuccessContent() {
   >("verifying");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const reference = searchParams.get("reference");
+  const reference = searchParams.get("tx_ref");
 
   const verifyPayment = useCallback(async () => {
     if (!reference) {
@@ -41,17 +41,28 @@ function SuccessContent() {
 
       if (error) throw error;
 
+      if (!data) {
+        throw new Error("No data returned from verification service.");
+      }
+
       if (data.status === "success") {
         setStatus("success");
         clearCart();
+        localStorage.removeItem("GMO_CHECKOUT_STATE");
       } else if (data.status === "pending") {
         setStatus("pending");
       } else {
         setStatus("failed");
+        localStorage.removeItem("GMO_CHECKOUT_STATE");
         setErrorMsg(data.message || "Your payment could not be confirmed.");
       }
     } catch (err: any) {
       console.error("Verification error:", err);
+      try {
+        localStorage.removeItem("GMO_CHECKOUT_STATE");
+      } catch (e) {
+        // ignore storage errors
+      }
       setStatus("failed");
       setErrorMsg(
         err.message || "An error occurred while verifying your payment.",

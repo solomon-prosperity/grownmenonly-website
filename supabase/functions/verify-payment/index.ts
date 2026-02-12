@@ -19,63 +19,58 @@ Deno.serve(async (req) => {
       throw new Error("Transaction reference is required");
     }
 
-    const paystackKey = Deno.env.get("PAYSTACK_SECRET_KEY");
+    const flutterwaveKey = Deno.env.get("FLUTTERWAVE_SECRET_KEY");
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!paystackKey || !supabaseUrl || !supabaseServiceKey) {
+    if (!flutterwaveKey || !supabaseUrl || !supabaseServiceKey) {
       throw new Error("Missing environment variables");
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 1. Verify with Paystack
-    const paystackRes = await fetch(
-      `https://api.paystack.co/transaction/verify/${reference}`,
+    // 1. Verify with Flutterwave
+    const flwRes = await fetch(
+      `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${reference}`,
       {
         headers: {
-          Authorization: `Bearer ${paystackKey}`,
+          Authorization: `Bearer ${flutterwaveKey}`,
         },
       },
     );
 
-    const paystackData = await paystackRes.json();
+    const flwData = await flwRes.json();
     console.log(
-      "Paystack Verification Response:",
-      JSON.stringify(paystackData, null, 2),
+      "Flutterwave Verification Response:",
+      JSON.stringify(flwData, null, 2),
     );
 
-    if (!paystackData.status) {
-      throw new Error(paystackData.message || "Paystack verification failed");
+    if (flwData.status !== "success") {
+      throw new Error(flwData.message || "Flutterwave verification failed");
     }
 
-    const status = paystackData.data.status; // 'success', 'failed', 'abandoned', 'reversed', 'ongoing', 'pending'
+    const status = flwData.data.status; // 'successful', 'failed'
+    const success =
+      status === "successful" &&
+      flwData.data.charged_amount >= flwData.data.amount;
 
-    if (status === "success") {
+    if (success) {
       // Success: Do not update DB, let webhook handle it.
       return new Response(JSON.stringify({ status: "success" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    } else if (status === "ongoing" || status === "pending") {
-      // Pending
-      return new Response(JSON.stringify({ status: "pending" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     } else {
-      // Failed / Abandoned / Reversed
+      // Failed
       console.log(
         `Payment failed with status: ${status}. Updating database...`,
       );
 
       // Update DB to return stock and mark as failed
-      const { error: rpcError } = await supabase.rpc(
-        "handle_paystack_webhook_v2",
-        {
-          p_reference: reference, // This is the Transaction ID
-          p_success: false,
-          p_raw_response: paystackData.data,
-        },
-      );
+      const { error: rpcError } = await supabase.rpc("handle_payment_webhook", {
+        p_reference: reference, // This is the Transaction ID
+        p_success: false,
+        p_raw_response: flwData.data,
+      });
 
       if (rpcError) {
         console.error("RPC Error during failure update:", rpcError);
@@ -84,7 +79,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           status: "failed",
-          message: paystackData.data.gateway_response || "Payment failed",
+          message: flwData.message || "Payment failed",
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -94,9 +89,15 @@ Deno.serve(async (req) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("Verification error:", message);
-    return new Response(JSON.stringify({ error: message }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        status: "failed",
+        message: "Payment verification failed.",
+      }),
+      {
+        status: 200, // Return 200 so the client can parse the error message
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

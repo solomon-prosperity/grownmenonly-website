@@ -523,6 +523,38 @@ export default function AdminTransactions() {
                 </div>
               </div>
 
+              {/* Currency & Gateway */}
+              <div className="grid grid-cols-2 gap-4 border-b border-gray-100 pb-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Currency
+                  </label>
+                  <p className="text-sm font-bold text-gray-900 uppercase">
+                    {selectedTx.currency || "NGN"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Gateway
+                  </label>
+                  <p className="text-sm font-bold text-gray-900 uppercase italic">
+                    {(() => {
+                      const raw = selectedTx.raw_response;
+                      if (!raw) return "N/A";
+                      if (raw.flw_ref || raw.data?.flw_ref || raw.txRef)
+                        return "Flutterwave";
+                      if (
+                        raw.customer?.customer_code ||
+                        raw.data?.customer?.customer_code ||
+                        raw.authorization
+                      )
+                        return "Paystack";
+                      return "N/A";
+                    })()}
+                  </p>
+                </div>
+              </div>
+
               {/* Linked Order */}
               <div className="space-y-3">
                 <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">

@@ -926,36 +926,29 @@ export default function AdminOrders() {
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                           Currency
                         </p>
-                        <p className="text-xs font-bold text-gray-600 mt-1">
-                          NGN
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                          Paid At
-                        </p>
-                        <p className="text-xs text-gray-600 mt-1">
-                          {selectedOrder.transactions[0].raw_response?.paid_at
-                            ? formatDate(
-                                selectedOrder.transactions[0].raw_response
-                                  .paid_at,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  second: "2-digit",
-                                },
-                              )
-                            : "N/A"}
+                        <p className="text-xs font-bold text-gray-600 mt-1 uppercase">
+                          {selectedOrder.transactions[0].currency || "NGN"}
                         </p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                           Gateway
                         </p>
-                        <p className="text-xs text-gray-600 mt-1 uppercase">
-                          Paystack
+                        <p className="text-xs text-gray-600 mt-1 uppercase font-bold">
+                          {(() => {
+                            const raw =
+                              selectedOrder.transactions[0].raw_response;
+                            if (!raw) return "N/A";
+                            if (raw.flw_ref || raw.data?.flw_ref || raw.txRef)
+                              return "Flutterwave";
+                            if (
+                              raw.customer?.customer_code ||
+                              raw.data?.customer?.customer_code ||
+                              raw.authorization
+                            )
+                              return "Paystack";
+                            return "N/A";
+                          })()}
                         </p>
                       </div>
                       <div>
@@ -972,7 +965,12 @@ export default function AdminOrders() {
                         </p>
                         <p className="text-xs text-gray-600 mt-1 uppercase">
                           {selectedOrder.transactions[0].raw_response
-                            ?.channel || "N/A"}
+                            ?.channel ||
+                            selectedOrder.transactions[0].raw_response
+                              ?.payment_type ||
+                            selectedOrder.transactions[0].raw_response?.data
+                              ?.channel ||
+                            "N/A"}
                         </p>
                       </div>
                     </div>

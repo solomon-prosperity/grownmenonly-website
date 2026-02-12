@@ -7,18 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-interface CartItem {
-  product_id: number;
-  quantity: number;
-}
-
-interface Product {
-  id: number;
-  price: number;
-  discount_active: boolean;
-  discount_type: "percentage" | "fixed";
-  discount_value: number;
-}
 
 Deno.serve(async (req) => {
   const now = new Date().toISOString();
@@ -31,9 +19,9 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const paystackKey = Deno.env.get("PAYSTACK_SECRET_KEY") ?? "";
+    const flutterwaveKey = Deno.env.get("FLUTTERWAVE_SECRET_KEY") ?? "";
 
-    if (!supabaseUrl || !supabaseServiceKey || !paystackKey) {
+    if (!supabaseUrl || !supabaseServiceKey || !flutterwaveKey) {
       throw new Error("Missing required server-side environment variables");
     }
 
@@ -55,6 +43,15 @@ Deno.serve(async (req) => {
       console.error("Missing required fields");
       throw new Error("All delivery details and cart items are required");
     }
+
+    // Fetch logo URL from settings (optional)
+    const { data: logoSetting } = await supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "flutterwave_logo")
+      .single();
+
+    const logoUrl = logoSetting?.value || "https://sjnqzymcvbhagdepxecz.supabase.co/storage/v1/object/public/assets/logo.png";
 
     // Call atomic RPC for stock reservation and order creation
     console.log("Calling RPC create_order_secure...");
@@ -79,35 +76,41 @@ Deno.serve(async (req) => {
 
     const { transaction_id, amount, expires_at } = data;
 
-    console.log("Initializing Paystack transaction...");
-    const paystackResponse = await fetch(
-      "https://api.paystack.co/transaction/initialize",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${paystackKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          amount: Math.round(amount * 100), // Ensure integer (kobo)
-          reference: transaction_id,
-          callback_url: `${req.headers.get("origin") || "http://localhost:3000"}/success`,
-        }),
+    console.log("Initializing Flutterwave transaction...");
+    const flwResponse = await fetch("https://api.flutterwave.com/v3/payments", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${flutterwaveKey}`,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        tx_ref: transaction_id,
+        amount: amount, // Flutterwave accepts float amounts (Naira)
+        currency: "NGN",
+        redirect_url: `${req.headers.get("origin") || "http://localhost:3000"}/success`,
+        customer: {
+          email: email,
+          phonenumber: phone,
+          name: customer_name,
+        },
+        customizations: {
+          title: "Grown Men Only Brands Limited",
+          logo: logoUrl,
+        },
+      }),
+    });
 
-    const paystackData = await paystackResponse.json();
-    console.log("Paystack Response:", JSON.stringify(paystackData, null, 2));
+    const flwData = await flwResponse.json();
+    console.log("Flutterwave Response:", JSON.stringify(flwData, null, 2));
 
-    if (!paystackData.status) {
-      console.error("Paystack Error:", paystackData.message);
-      throw new Error(paystackData.message);
+    if (flwData.status !== "success") {
+      console.error("Flutterwave Error:", flwData.message);
+      throw new Error(flwData.message || "Payment initialization failed");
     }
 
     return new Response(
       JSON.stringify({
-        url: paystackData.data.authorization_url,
+        url: flwData.data.link,
         transaction_id,
         expires_at,
       }),

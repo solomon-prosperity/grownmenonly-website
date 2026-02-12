@@ -262,21 +262,7 @@ export default function CheckoutPage() {
         {/* Left Side: Delivery Details */}
         <div className="space-y-8">
           <div>
-            <div className="mb-6">
-              {logoUrl ? (
-                <Image
-                  src={logoUrl}
-                  alt="GROWN MEN ONLY"
-                  width={160}
-                  height={48}
-                  className="h-10 w-auto object-contain"
-                />
-              ) : (
-                <span className="text-xl font-black uppercase tracking-tighter text-white">
-                  Grown Men Only
-                </span>
-              )}
-            </div>
+            <div className="mb-6"></div>
             <h1 className="text-3xl font-bold tracking-tight uppercase mb-2">
               Checkout
             </h1>
@@ -408,10 +394,11 @@ export default function CheckoutPage() {
                   onClick={handleRedirectToPaystack}
                   className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded transition-all uppercase tracking-widest"
                 >
-                  Pay with Paystack
+                  Pay with Flutterwave
                 </button>
                 <p className="text-[10px] text-center text-gray-500 uppercase tracking-tighter italic">
-                  * Clicking will redirect you to Paystack&apos;s secure portal
+                  * Clicking will redirect you to Flutterwave&apos;s secure
+                  portal
                 </p>
               </div>
             )}
@@ -500,7 +487,7 @@ export default function CheckoutPage() {
             </div>
             <div className="text-[10px] text-gray-400 uppercase leading-relaxed tracking-widest">
               Secure Checkout Powered by{" "}
-              <span className="text-white font-bold">Paystack</span>. Your
+              <span className="text-white font-bold">Flutterwave</span>. Your
               inventory is reserved once you click prepare checkout.
             </div>
           </div>
