@@ -13,6 +13,17 @@ const nextConfig = {
         destination: '/admin/login',
         permanent: false,
       },
+      {
+        source: '/',
+        has: [
+          {
+            type: 'host',
+            value: 'admin.dev.grownmenonly.com',
+          },
+        ],
+        destination: '/admin/login',
+        permanent: false,
+      },
     ]
   },
   images: {
