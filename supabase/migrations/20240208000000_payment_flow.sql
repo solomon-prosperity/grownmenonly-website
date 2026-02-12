@@ -416,5 +416,5 @@ SELECT cron.schedule(
   $$ SELECT cleanup_stale_orders(); $$
 );
 
--- To unschedule the job
+-- To unschedule the cleanup job
 SELECT cron.unschedule('cleanup-stale-orders-job');
